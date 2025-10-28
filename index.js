@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
-const allowedHeaders = ["http://127.0.0.1:5500/index.html"]
+const allowedHeaders = ["http://127.0.0.1:5500/index.html","https://ahsan662-cell.github.io/CredttApplication/"]
 app.use(cors({
     origin: (Origin,callback)=>{
         if(Origin || allowedHeaders.includes(!Origin)){
