@@ -1,122 +1,124 @@
 require('dotenv').config();
+console.log('SMTP User:', process.env.SMTP_USER);
 const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const mime = require('mime-types');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
+const cors = require('cors');
 
 const app = express();
 
-app.use(express.json({ limit: "25mb" }));
-app.use(express.urlencoded({ limit: "25mb", extended: true }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
-const allowedOrigins = [
-  "https://ahsan662-cell.github.io",
-  "https://ahsan662-cell.github.io/CredttApplication/",
-  "http://localhost:3000"
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        return callback(new Error("CORS Error: Origin not allowed"));
-      }
-    },
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
-  })
-);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
-
+const allowedHeaders = ["https://ahsan662-cell.github.io","https://ahsan662-cell.github.io/CredttApplication/"]
+app.use(cors({
+  origin: function(origin, callback){
+    if(!origin) return callback(null, true);
+    if(allowedHeaders.includes(origin)){
+        callback(null, true);
+    } else {
+        callback(new Error("CORS Error: Origin not allowed"));
+    }
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 },
+  limits: {
+    fieldSize: 25 * 1024 * 1024,
+    fileSize: 25 * 1024 * 1024
+  }
 });
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: 'gmail',
   auth: {
-    user: process.env.FROM_EMAIL,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-transporter.verify((err) => {
-  if (err) console.error(" Email connection failed:", err);
-  else console.log("Email service ready");
-});
-
-app.get("/", (req, res) => {
-  res.send("<h2> Credit Application Backend is Running</h2>");
-});
-
-app.post(
-  "/submit-form",
-  upload.fields([
-    { name: "formPdf", maxCount: 1 },
-    { name: "files", maxCount: 3 },
-  ]),
-  async (req, res) => {
-    try {
-      const pdfFile = req.files?.formPdf?.[0];
-      const extraFiles = req.files?.files || [];
-      const formFields = req.body || {};
-
-      if (!pdfFile) {
-        return res.status(400).json({ ok: false, message: "Missing PDF file" });
-      }
-
-      const htmlBody = `
-        <h2>📄 New Credit Application Received</h2>
-        <p>Attached is the submitted PDF and ${extraFiles.length} additional file(s).</p>
-      `;
-
-      const attachments = [
-        {
-          filename: pdfFile.originalname,
-          path: pdfFile.path,
-          contentType: mime.lookup(pdfFile.path),
-        },
-        ...extraFiles.map((f) => ({
-          filename: f.originalname,
-          path: f.path,
-          contentType: mime.lookup(f.path),
-        })),
-      ];
-
-      const info = await transporter.sendMail({
-        from: process.env.FROM_EMAIL,
-        to: process.env.ADMIN_EMAIL,
-        subject: `New Form Submission`,
-        html: htmlBody,
-        attachments,
-      });
-
-      [pdfFile, ...extraFiles].forEach((f) => {
-        if (f && fs.existsSync(f.path)) fs.unlinkSync(f.path);
-      });
-
-      console.log("Email sent:", info.response);
-
-      res.json({
-        ok: true,
-        message: "Email sent successfully!",
-        response: info.response,
-      });
-    } catch (err) {
-      console.error("Error:", err);
-      res.status(500).json({ ok: false, error: err.message });
-    }
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
   }
-);
+});
+
+transporter.verify((err, success) => {
+  if (err) console.error('Email Error:', err);
+  else console.log('Email service ready');
+});
+
+app.get('/', (req, res) => {
+  res.send('<h1> Credit Form Backend is Running</h1>');
+});
+
+app.post('/submit-form', upload.fields([
+  { name: 'formPdf', maxCount: 1 },
+  { name: 'files', maxCount: 3 }
+]), async (req, res) => {
+  try {
+    const pdfFile = req.files?.formPdf?.[0];
+    const extraFiles = req.files?.files || [];
+
+    console.log('Files received:', { pdf: !!pdfFile, extras: extraFiles.length });
+
+    if (!pdfFile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing PDF file'
+      });
+    }
+
+    const formFields = req.body || {};
+    const attachments = [
+      {
+        filename: 'credit_application.pdf',
+        content: pdfFile.buffer, 
+        contentType: 'application/pdf'
+      },
+      ...extraFiles.map(f => ({
+        filename: f.originalname,
+        content: f.buffer, 
+        contentType: f.mimetype || 'application/octet-stream'
+      }))
+    ];
+
+    let htmlBody = `<h2>📄 New Form Submission</h2><br/>
+    <p>Attached is the submitted PDF and ${extraFiles.length} file(s).</p>`;
+
+    console.log('📧 Sending email to admin:', process.env.ADMIN_EMAIL);
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: process.env.ADMIN_EMAIL,
+      subject: `New Credit Application`,
+      html: htmlBody,
+      attachments: attachments
+    });
+
+    console.log('✅ Admin email sent');
+
+
+    return res.json({
+      success: true,
+      message: 'Application submitted! Check your email for confirmation. You can download the PDF from the email.'
+    });
+
+  } catch (err) {
+    console.error('Error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Error: ' + err.message
+    });
+  }
+});
+
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
+});
+
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Server error: ' + err.message
+  });
+});
 
 module.exports = app;
