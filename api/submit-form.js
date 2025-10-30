@@ -1,16 +1,15 @@
 require('dotenv').config();
-console.log(process.env.SMTP_USER);
+console.log('SMTP User:', process.env.SMTP_USER);
+
 const express = require('express');
-const multer  = require('multer');
-const path = require('path');
-const fs = require('fs');
+const multer = require('multer');
 const nodemailer = require('nodemailer');
-const mime = require('mime-types');
-const cors = require("cors");
+const cors = require('cors');
+
 const app = express();
+
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
-
 
 app.use(cors({
   origin: '*',
@@ -18,23 +17,13 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
-
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const safeName = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
-    cb(null, safeName);
-  }
-});
-
+const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: {
     fieldSize: 25 * 1024 * 1024,
-  },
+    fileSize: 25 * 1024 * 1024
+  }
 });
 
 const transporter = nodemailer.createTransport({
@@ -45,7 +34,14 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-app.get('/', (req, res) => res.send(`<h1>✅ Gmail backend is running</h1>`));
+transporter.verify((err, success) => {
+  if (err) console.error('Email Error:', err);
+  else console.log('Email service ready');
+});
+
+app.get('/', (req, res) => {
+  res.send('<h1> Credit Form Backend is Running</h1>');
+});
 
 app.post('/submit-form', upload.fields([
   { name: 'formPdf', maxCount: 1 },
@@ -53,18 +49,25 @@ app.post('/submit-form', upload.fields([
 ]), async (req, res) => {
   try {
     const pdfFile = req.files?.formPdf?.[0];
-    console.log(pdfFile);
     const extraFiles = req.files?.files || [];
-    if (!pdfFile) return res.status(400).json({ ok: false, error: "Missing PDF file" });
+
+    console.log('📥 Files received:', { pdf: !!pdfFile, extras: extraFiles.length });
+
+    if (!pdfFile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing PDF file'
+      });
+    }
 
     const formFields = req.body || {};
-    let htmlBody = `<h2>📄 New Form Submission</h2><ul>;
-    for (const [${k}, ${v}] of Object.entries(formFields)) {
+    let htmlBody =` <h2>📄 New Form Submission</h2><ul>;
+    for (const [k, v] of Object.entries(formFields)) {
       htmlBody += <li><b>${k}:</b> ${v}</li>;
     }
     htmlBody += </ul><p>Attached is the submitted PDF and ${extraFiles.length} file(s).</p>`;
 
-    const attachments = [
+     const attachments = [
       { filename: pdfFile.originalname, path: pdfFile.path, contentType: mime.lookup(pdfFile.path) },
       ...extraFiles.map(f => ({
         filename: f.originalname,
@@ -73,20 +76,30 @@ app.post('/submit-form', upload.fields([
       }))
     ];
 
-    const info = await transporter.sendMail({
-      from: process.env.FROM_EMAIL,
+
+    console.log('📧 Sending email to admin:', process.env.ADMIN_EMAIL);
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
       to: process.env.ADMIN_EMAIL,
-      subject:" New Form Submission ",
+      subject: `New Credit Application`,
       html: htmlBody,
-      attachments
+      attachments: attachments
     });
 
-    [pdfFile, ...extraFiles].forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+      console.log('User email sent to:', email);
+    
 
-    res.json({ ok: true, message: "Email sent successfully!", response: info.response });
+    return res.json({
+      success: true,
+      message: 'Application submitted! Check your email for confirmation. You can download the PDF from the email.'
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ ok: false, error: err.message });
+    console.error('Error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Error: ' + err.message
+    });
   }
 });
- module.exports = app;
+module.exports = app;
