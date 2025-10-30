@@ -1,30 +1,46 @@
 require('dotenv').config();
-console.log('SMTP User:', process.env.SMTP_USER);
-
+console.log(process.env.SMTP_USER);
 const express = require('express');
-const multer = require('multer');
+const multer  = require('multer');
+const path = require('path');
+const fs = require('fs');
 const nodemailer = require('nodemailer');
-const cors = require('cors');
-
+const mime = require('mime-types');
+const cors = require("cors");
 const app = express();
-
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
+const allowedHeaders = ["https://ahsan662-cell.github.io/CredttApplication/","http://127.0.0.1:5500/index.html"]
+
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+    origin: function(origin, callback){
+        if(!origin) return callback(null, true);
+
+        if(allowedHeaders.includes(origin)){
+            callback(null, true);
+        } else {
+            callback(new Error("CORS Error: Origin not allowed"));
+        }
+    },
 }));
+const UPLOAD_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename: (req, file, cb) => {
+    const safeName = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+    cb(null, safeName);
+  }
+});
+
 const upload = multer({
   storage,
   limits: {
     fieldSize: 25 * 1024 * 1024,
-    fileSize: 25 * 1024 * 1024
-  }
+  },
 });
 
 const transporter = nodemailer.createTransport({
@@ -35,14 +51,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-transporter.verify((err, success) => {
-  if (err) console.error('❌ Email Error:', err);
-  else console.log('✅ Email service ready');
-});
-
-app.get('/', (req, res) => {
-  res.send('<h1>✅ Credit Form Backend is Running</h1>');
-});
+app.get('/', (req, res) => res.send(<h1>'✅ Gmail backend is running'</h1>));
 
 app.post('/submit-form', upload.fields([
   { name: 'formPdf', maxCount: 1 },
@@ -50,19 +59,13 @@ app.post('/submit-form', upload.fields([
 ]), async (req, res) => {
   try {
     const pdfFile = req.files?.formPdf?.[0];
+    console.log(pdfFile);
     const extraFiles = req.files?.files || [];
+    if (!pdfFile) return res.status(400).json({ ok: false, error: "Missing PDF file" });
 
-    console.log('📥 Files received:', { pdf: !!pdfFile, extras: extraFiles.length });
-
-    if (!pdfFile) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing PDF file'
-      });
-    }
     const formFields = req.body || {};
-    let htmlBody =` <h2>📄 New Form Submission</h2><ul>;
-    for (const [${k}, ${v}] of Object.entries(formFields)) {
+    let htmlBody = `<h2>📄 New Form Submission</h2><ul>;
+    for (const [k, v] of Object.entries(formFields)) {
       htmlBody += <li><b>${k}:</b> ${v}</li>;
     }
     htmlBody += </ul><p>Attached is the submitted PDF and ${extraFiles.length} file(s).</p>`;
@@ -76,30 +79,20 @@ app.post('/submit-form', upload.fields([
       }))
     ];
 
-
-    console.log('📧 Sending email to admin:', process.env.ADMIN_EMAIL);
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: process.env.FROM_EMAIL,
       to: process.env.ADMIN_EMAIL,
-      subject: `New Credit Application `,
+      subject:" New Form Submission ",
       html: htmlBody,
-      attachments: attachments
+      attachments
     });
 
-    console.log('✅ Admin email sent');
+    [pdfFile, ...extraFiles].forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
 
-    return res.json({
-      success: true,
-      message: 'Application submitted! Check your email for confirmation. You can download the PDF from the email.'
-    });
-
+    res.json({ ok: true, message: "Email sent successfully!", response: info.response });
   } catch (err) {
-    console.error('❌ Error:', err);
-    return res.status(500).json({
-      success: false,
-      message: 'Error: ' + err.message
-    });
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
-
-module.exports = app;
+ module.exports = app;
