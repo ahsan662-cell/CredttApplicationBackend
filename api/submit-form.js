@@ -59,7 +59,7 @@ app.post('/submit-form', upload.fields([
 
     const formFields = req.body || {};
     let htmlBody = `<h2>📄 New Form Submission</h2><ul>;
-    for (const [k, v] of Object.entries(formFields)) {
+    for (const [${k}, ${v}] of Object.entries(formFields)) {
       htmlBody += <li><b>${k}:</b> ${v}</li>;
     }
     htmlBody += </ul><p>Attached is the submitted PDF and ${extraFiles.length} file(s).</p>`;
