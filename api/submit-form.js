@@ -10,6 +10,7 @@ const app = express();
 
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
+
 const allowedHeaders = ["https://ahsan662-cell.github.io","https://ahsan662-cell.github.io/CredttApplication/"]
 app.use(cors({
   origin: function(origin, callback){
@@ -70,9 +71,6 @@ app.post('/submit-form', upload.fields([
 
     const formFields = req.body || {};
     let htmlBody =` <h2>📄 New Form Submission</h2><ul>;
-    for (const [k, v] of Object.entries(formFields)) {
-      htmlBody += <li><b>${k}:</b> ${v}</li>;
-    }
     htmlBody += </ul><p>Attached is the submitted PDF and ${extraFiles.length} file(s).</p>`;
 
      const attachments = [
