@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
-const allowedHeaders = ["https://ahsan662-cell.github.io/CredttApplication/"]
+const allowedHeaders = ["https://ahsan662-cell.github.io/CredttApplication/","http://127.0.0.1:5500/index.html"]
 
 app.use(cors({
     origin: function(origin, callback){
@@ -51,7 +51,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-app.get('/', (req, res) => res.send('✅ Gmail backend is running'));
+app.get('/', (req, res) => res.send(<h1>'✅ Gmail backend is running'</h1>));
 
 app.post('/submit-form', upload.fields([
   { name: 'formPdf', maxCount: 1 },
