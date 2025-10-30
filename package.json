@@ -4,15 +4,17 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "multer": "^2.0.2",
+    "mime-types": "^2.1.35",
     "nodemailer": "^7.0.10"
   },
   "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js",
-    "dev": "node index.js"
+    "start": "nodemon api/submit-form.js",
+    "dev": "node api/submit-form.js"
   },
   "keywords": [],
   "author": "",
