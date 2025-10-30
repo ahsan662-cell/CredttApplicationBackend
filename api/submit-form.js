@@ -1,6 +1,6 @@
 require('dotenv').config();
 console.log('SMTP User:', process.env.SMTP_USER);
-
+const mime = require("mime-types");
 const express = require('express');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
