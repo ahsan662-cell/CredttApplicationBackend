@@ -11,19 +11,13 @@ const app = express();
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
-const allowedHeaders = ["https://ahsan662-cell.github.io/CredttApplication/","http://127.0.0.1:5500/index.html"]
 
 app.use(cors({
-    origin: function(origin, callback){
-        if(!origin) return callback(null, true);
-
-        if(allowedHeaders.includes(origin)){
-            callback(null, true);
-        } else {
-            callback(new Error("CORS Error: Origin not allowed"));
-        }
-    },
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 
