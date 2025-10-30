@@ -45,7 +45,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-app.get('/', (req, res) => res.send(<h1>'✅ Gmail backend is running'</h1>));
+app.get('/', (req, res) => res.send(`<h1>✅ Gmail backend is running</h1>`));
 
 app.post('/submit-form', upload.fields([
   { name: 'formPdf', maxCount: 1 },
