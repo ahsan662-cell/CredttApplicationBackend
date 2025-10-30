@@ -92,9 +92,6 @@ app.post('/submit-form', upload.fields([
       attachments: attachments
     });
 
-      console.log('User email sent to:', email);
-    
-
     return res.json({
       success: true,
       message: 'Application submitted! Check your email for confirmation. You can download the PDF from the email.'
