@@ -10,7 +10,7 @@ const app = express();
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
-const allowedHeaders = ["https://ahsan662-cell.github.io","https://ahsan662-cell.github.io/CredttApplication/"]
+const allowedHeaders = ["https://ahsan662-cell.github.io","https://ahsan662-cell.github.io/CredttApplication/","https://ahsan662-cell.github.io/Purchase-form/"]
 app.use(cors({
   origin: function(origin, callback){
     if(!origin) return callback(null, true);
@@ -54,6 +54,7 @@ app.post('/submit-form', upload.fields([
   { name: 'files', maxCount: 3 }
 ]), async (req, res) => {
   try {
+    const {email} = req.body;
     const pdfFile = req.files?.formPdf?.[0];
     const extraFiles = req.files?.files || [];
 
@@ -85,14 +86,17 @@ app.post('/submit-form', upload.fields([
 
     console.log('📧 Sending email to admin:', process.env.ADMIN_EMAIL);
     await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to: process.env.ADMIN_EMAIL,
+      from: email,
+      to: [
+        process.env.ADMIN_EMAIL1,
+        process.env.ADMIN_EMAIL2, 
+        process.env.ADMIN_EMAIL3
+      ].filter(Boolean), 
       subject: `New Credit Application`,
       html: htmlBody,
       attachments: attachments
     });
-
-    console.log('✅ Admin email sent');
+    
 
 
     return res.json({
