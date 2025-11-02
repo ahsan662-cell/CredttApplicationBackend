@@ -7,10 +7,10 @@ const cors = require('cors');
 
 const app = express();
 
-app.use(express.json({ limit: '25mb' }));
-app.use(express.urlencoded({ limit: '25mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-const allowedOrigins = ["http://127.0.0.1:5500/index.html","https://ahsan662-cell.github.io","https://ahsan662-cell.github.io/CredttApplication/","https://ahsan662-cell.github.io/Purchase-form/"]
+const allowedOrigins = ["http://127.0.0.1:5500","https://ahsan662-cell.github.io"]
 app.use(cors({
   origin: function(origin, callback){
     if(!origin) return callback(null, true);
@@ -27,8 +27,8 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: {
-    fieldSize: 25 * 1024 * 1024,
-    fileSize: 25 * 1024 * 1024
+    fieldSize: 50 * 1024 * 1024,
+    fileSize: 50 * 1024 * 1024
   }
 });
 
