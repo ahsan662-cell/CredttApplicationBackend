@@ -70,7 +70,7 @@ app.post('/submit-form', upload.fields([
     const formFields = req.body || {};
     const attachments = [
       {
-        filename: 'credit_application.pdf',
+        filename: 'NewApplication.pdf',
         content: pdfFile.buffer, 
         contentType: 'application/pdf'
       },
@@ -86,13 +86,14 @@ app.post('/submit-form', upload.fields([
 
     console.log('📧 Sending email to admin:', process.env.ADMIN_EMAIL);
     await transporter.sendMail({
-      from: email,
+      from: "<no-reply@yourdomain.com>",
+      replyTo:email,
       to: [
         process.env.ADMIN_EMAIL1,
         process.env.ADMIN_EMAIL2, 
         process.env.ADMIN_EMAIL3
       ].filter(Boolean), 
-      subject: `New Credit Application`,
+      subject: `New Form Submission Application`,
       html: htmlBody,
       attachments: attachments
     });
